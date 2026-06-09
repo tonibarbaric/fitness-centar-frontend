@@ -49,15 +49,15 @@ const stats = ref({
 
 const dohvatiPodatke = async () => {
   try {
-    const resT = await axios.get('http://127.0.0.1:5000/treneri')
-    const resC = await axios.get('http://127.0.0.1:5000/clanovi')
-    const resTr = await axios.get('http://127.0.0.1:5000/treninzi')
+    // Radimo samo jedan poziv na novu rutu za statistiku
+    const res = await axios.get('http://127.0.0.1:5000/statistika')
     
-    stats.value.treneri = resT.data.length
-    stats.value.clanovi = resC.data.length
-    stats.value.treninzi = resTr.data.length
+    // Izravno spremamo točne ukupne brojke iz baze
+    stats.value.treneri = res.data.treneri
+    stats.value.clanovi = res.data.clanovi
+    stats.value.treninzi = res.data.treninzi
   } catch (err) {
-    console.error("Greška pri spajanju na Flask:", err)
+    console.error("Greška pri dohvaćanju statistike s Flaska:", err)
   }
 }
 
