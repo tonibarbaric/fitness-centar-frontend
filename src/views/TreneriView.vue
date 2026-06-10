@@ -30,49 +30,45 @@
           <td class="text-center">
             <v-btn icon variant="text" color="warning" class="mr-2" @click="otvoriUredi(trener)">
               <v-icon>mdi-pencil</v-icon>
-              <v-tooltip activator="parent" location="top">Uredi</v-tooltip>
             </v-btn>
-
             <v-btn icon variant="text" color="error" @click="obrisiTrenera(trener.id)">
               <v-icon>mdi-delete</v-icon>
-              <v-tooltip activator="parent" location="top">Izbrisi</v-tooltip>
             </v-btn>
           </td>
         </tr>
       </tbody>
     </v-table>
 
-    <div class="d-flex justify-center mt-4">
-      <v-pagination
-        v-model="trenutnaStranica"
-        :length="ukupnoStranica"
-        :total-visible="5"
-        @update:model-value="dohvatiTrenere"
-        color="primary"
-      ></v-pagination>
-    </div>
-
     <v-dialog v-model="dialog" max-width="500px">
-      <v-card class="pa-4">
-        <v-card-title>{{ isEdit ? 'Uredi Trenera' : 'Novi Trener' }}</v-card-title>
+      <v-card>
+        <v-card-title>
+          <span class="text-h5">{{ isEdit ? 'Uredi Trenera' : 'Novi Trener' }}</span>
+        </v-card-title>
         <v-card-text>
-          <v-text-field v-model="formaTrener.ime" label="Ime" variant="outlined"></v-text-field>
-          <v-text-field v-model="formaTrener.prezime" label="Prezime" variant="outlined"></v-text-field>
-          
-          <v-select
-            v-model="formaTrener.specijalnost_id"
-            :items="specijalnosti"
-            item-title="naziv"
-            item-value="id"
-            label="Odaberi specijalnost"
-            variant="outlined"
-            clearable
-          ></v-select>
+          <v-container>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field v-model="formaTrener.ime" label="Ime"></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-text-field v-model="formaTrener.prezime" label="Prezime"></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-select
+                  v-model="formaTrener.specijalnost_id"
+                  :items="specijalnosti"
+                  item-title="naziv"
+                  item-value="id"
+                  label="Specijalnost"
+                ></v-select>
+              </v-col>
+            </v-row>
+          </v-container>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="grey" variant="text" @click="dialog = false">Odustani</v-btn>
-          <v-btn color="primary" @click="spremiTrenera">Spremi</v-btn>
+          <v-btn color="blue-darken-1" variant="text" @click="dialog = false">Odustani</v-btn>
+          <v-btn color="blue-darken-1" variant="text" @click="spremiTrenera">Spremi</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -89,17 +85,10 @@ const dialog = ref(false)
 const isEdit = ref(false)
 const formaTrener = ref({ id: null, ime: '', prezime: '', specijalnost_id: null })
 
-// Stanja za paginaciju
-const trenutnaStranica = ref(1)
-const ukupnoStranica = ref(1)
-const poStranici = 5
-
 const dohvatiTrenere = async () => {
   try {
-    const res = await axios.get(`http://127.0.0.1:5000/treneri?page=${trenutnaStranica.value}&per_page=${poStranici}`)
-    treneri.value = res.data.podaci
-    ukupnoStranica.value = res.data.ukupno_stranica
-    trenutnaStranica.value = res.data.trenutna_stranica
+    const res = await axios.get('http://127.0.0.1:5000/treneri')
+    treneri.value = res.data
   } catch (error) {
     console.error("Greška pri dohvaćanju trenera:", error)
   }
@@ -139,16 +128,20 @@ const spremiTrenera = async () => {
       await axios.post('http://127.0.0.1:5000/treneri', formaTrener.value)
     }
     dialog.value = false
-    dohvatiTrenere() 
+    dohvatiTrenere()
   } catch (error) {
-    alert("Greška pri spremanju!")
+    console.error(error)
   }
 }
 
 const obrisiTrenera = async (id) => {
-  if (confirm('Jeste li sigurni?')) {
-    await axios.delete(`http://127.0.0.1:5000/treneri/${id}`)
-    dohvatiTrenere()
+  if (confirm("Jeste li sigurni da želite izbrisati ovog trenera?")) {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/treneri/${id}`)
+      dohvatiTrenere()
+    } catch (error) {
+      console.error(error)
+    }
   }
 }
 

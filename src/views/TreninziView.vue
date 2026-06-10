@@ -30,65 +30,66 @@
               {{ formatirajVrijeme(trening.vrijeme_pocetka) }} - {{ formatirajVrijeme(trening.vrijeme_kraja) }}
             </small>
           </td>
-          <td>{{ trening.kapacitet }}</td>
-          <td>{{ trening.trener_ime }}</td>
+          <td>{{ trening.kapacitet }} mjesta</td>
+          <td>{{ trening.trener ? trening.trener.ime + ' ' + trening.trener.prezime : 'Nema trenera' }}</td>
           <td class="text-center">
             <v-btn icon variant="text" color="warning" class="mr-2" @click="otvoriUredi(trening)">
               <v-icon>mdi-pencil</v-icon>
-              <v-tooltip activator="parent" location="top">Uredi</v-tooltip>
             </v-btn>
-            
             <v-btn icon variant="text" color="error" @click="obrisiTrening(trening.id)">
               <v-icon>mdi-delete</v-icon>
-              <v-tooltip activator="parent" location="top">Izbrisi</v-tooltip>
             </v-btn>
           </td>
         </tr>
       </tbody>
     </v-table>
 
-    <div class="d-flex justify-center mt-4">
-      <v-pagination
-        v-model="trenutnaStranica"
-        :length="ukupnoStranica"
-        :total-visible="5"
-        @update:model-value="dohvatiTreninzi"
-        color="success"
-      ></v-pagination>
-    </div>
-
     <v-dialog v-model="dialog" max-width="600px">
-      <v-card class="pa-4">
-        <v-card-title>{{ isEdit ? 'Uredi Trening' : 'Dodaj Trening' }}</v-card-title>
+      <v-card>
+        <v-card-title>
+          <span class="text-h5">{{ isEdit ? 'Uredi Trening' : 'Novi Trening' }}</span>
+        </v-card-title>
         <v-card-text>
-          <v-text-field v-model="formaTrening.naziv" label="Naziv Treninga" variant="outlined"></v-text-field>
-          <v-textarea v-model="formaTrening.opis" label="Opis" variant="outlined" rows="2"></v-textarea>
-          <v-text-field v-model="formaTrening.dan_u_tjednu" label="Dan u tjednu" variant="outlined"></v-text-field>
-          
-          <v-row>
-            <v-col cols="6">
-              <v-text-field v-model="formaTrening.vrijeme_pocetka" label="Početak" type="datetime-local" variant="outlined"></v-text-field>
-            </v-col>
-            <v-col cols="6">
-              <v-text-field v-model="formaTrening.vrijeme_kraja" label="Kraj" type="datetime-local" variant="outlined"></v-text-field>
-            </v-col>
-          </v-row>
-
-          <v-text-field v-model.number="formaTrening.kapacitet" label="Kapacitet" type="number" variant="outlined"></v-text-field>
-          
-          <v-select
-            v-model="formaTrening.trener_id"
-            :items="sviTreneri"
-            :item-title="t => `${t.ime} ${t.prezime}`"
-            item-value="id"
-            label="Dodijeli Trenera"
-            variant="outlined"
-          ></v-select>
+          <v-container>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field v-model="formaTrening.naziv" label="Naziv treninga"></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-textarea v-model="formaTrening.opis" label="Opis treninga" rows="2"></v-textarea>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="formaTrening.dan_u_tjednu"
+                  :items="['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja']"
+                  label="Dan u tjednu"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model="formaTrening.kapacitet" type="number" label="Kapacitet"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model="formaTrening.vrijeme_pocetka" type="datetime-local" label="Vrijeme početka"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model="formaTrening.vrijeme_kraja" type="datetime-local" label="Vrijeme kraja"></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-select
+                  v-model="formaTrening.trener_id"
+                  :items="sviTreneri"
+                  :item-title="item => item.ime + ' ' + item.prezime"
+                  item-value="id"
+                  label="Dodijeli Trenera"
+                ></v-select>
+              </v-col>
+            </v-row>
+          </v-container>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="grey" variant="text" @click="dialog = false">Odustani</v-btn>
-          <v-btn color="success" @click="spremiTrening">Spremi</v-btn>
+          <v-btn color="blue-darken-1" variant="text" @click="dialog = false">Odustani</v-btn>
+          <v-btn color="blue-darken-1" variant="text" @click="spremiTrening">Spremi</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -100,43 +101,15 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
 const treninzi = ref([])
-const sviTreneri = ref([]) // Služi isključivo za v-select (pun popis trenera)
+const sviTreneri = ref([])
 const dialog = ref(false)
 const isEdit = ref(false)
-
-const formaTrening = ref({
-  id: null,
-  naziv: '',
-  opis: '',
-  dan_u_tjednu: '',
-  vrijeme_pocetka: '',
-  vrijeme_kraja: '',
-  kapacitet: 10,
-  trener_id: null
-})
-
-const trenutnaStranica = ref(1)
-const ukupnoStranica = ref(1)
-const poStranici = 5
-
-const formatirajVrijeme = (isoString) => {
-  if (!isoString) return ''
-  try {
-    const datum = new Date(isoString)
-    const sati = String(datum.getHours()).padStart(2, '0')
-    const minute = String(datum.getMinutes()).padStart(2, '0')
-    return `${sati}:${minute} h`
-  } catch (e) {
-    return isoString
-  }
-}
+const formaTrening = ref({ id: null, naziv: '', opis: '', dan_u_tjednu: '', vrijeme_pocetka: '', vrijeme_kraja: '', kapacitet: 10, trener_id: null })
 
 const dohvatiTreninzi = async () => {
   try {
-    const res = await axios.get(`http://127.0.0.1:5000/treninzi?page=${trenutnaStranica.value}&per_page=${poStranici}`)
-    treninzi.value = res.data.podaci
-    ukupnoStranica.value = res.data.ukupno_stranica
-    trenutnaStranica.value = res.data.trenutna_stranica
+    const res = await axios.get('http://127.0.0.1:5000/treninzi')
+    treninzi.value = res.data
   } catch (e) {
     console.error(e)
   }
@@ -144,8 +117,8 @@ const dohvatiTreninzi = async () => {
 
 const dohvatiSveTrenereZaDropdown = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:5000/treneri?page=1&per_page=100')
-    sviTreneri.value = res.data.podaci
+    const res = await axios.get('http://127.0.0.1:5000/treneri')
+    sviTreneri.value = res.data
   } catch (e) {
     console.error(e)
   }
@@ -161,6 +134,7 @@ const otvoriUredi = (trening) => {
   isEdit.value = true
   formaTrening.value = { 
     ...trening,
+    trener_id: trening.trener ? trening.trener.id : null,
     vrijeme_pocetka: trening.vrijeme_pocetka ? trening.vrijeme_pocetka.substring(0, 16) : '',
     vrijeme_kraja: trening.vrijeme_kraja ? trening.vrijeme_kraja.substring(0, 16) : ''
   }
@@ -177,17 +151,26 @@ const spremiTrening = async () => {
     dialog.value = false
     dohvatiTreninzi()
   } catch (error) {
-    alert("Greška prilikom slanja treninga!")
+    console.error(error)
   }
 }
 
 const obrisiTrening = async (id) => {
-  if (confirm('Želite li trajno izbrisati ovaj trening?')) {
-    await axios.delete(`http://127.0.0.1:5000/treninzi/${id}`)
-    dohvatiTreninzi()
+  if (confirm("Jeste li sigurni da želite obrisati ovaj trening?")) {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/treninzi/${id}`)
+      dohvatiTreninzi()
+    } catch (error) {
+      console.error(error)
+    }
   }
 }
 
+const formatirajVrijeme = (isoString) => {
+  if (!isoString) return ''
+  const d = new Date(isoString)
+  return d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })
+}
 
 onMounted(() => {
   dohvatiTreninzi()

@@ -1,5 +1,5 @@
 <template>
-  <v-container mt-5>
+  <v-container class="mt-5">
     <v-row>
       <v-col cols="12">
         <h1 class="text-h4 mb-5 text-center">Teretana PowerGym</h1>
@@ -17,7 +17,7 @@
       </v-col>
 
       <v-col cols="12" md="4">
-        <v-card color="white" theme="dark">
+        <v-card color="grey-darken-3" theme="dark">
           <v-card-text class="text-center">
             <div class="text-h6">Članovi</div>
             <div class="text-h2 font-weight-bold">{{ stats.clanovi }}</div>
@@ -41,25 +41,14 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
-const stats = ref({
-  treneri: 0,
-  clanovi: 0,
-  treninzi: 0
-})
+const stats = ref({ treneri: 0, clanovi: 0, treninzi: 0 })
 
-const dohvatiPodatke = async () => {
+onMounted(async () => {
   try {
-    // Radimo samo jedan poziv na novu rutu za statistiku
     const res = await axios.get('http://127.0.0.1:5000/statistika')
-    
-    // Izravno spremamo točne ukupne brojke iz baze
-    stats.value.treneri = res.data.treneri
-    stats.value.clanovi = res.data.clanovi
-    stats.value.treninzi = res.data.treninzi
-  } catch (err) {
-    console.error("Greška pri dohvaćanju statistike s Flaska:", err)
+    stats.value = res.data
+  } catch (error) {
+    console.error("Greška pri dohvaćanju statistike:", error)
   }
-}
-
-onMounted(dohvatiPodatke)
+})
 </script>
