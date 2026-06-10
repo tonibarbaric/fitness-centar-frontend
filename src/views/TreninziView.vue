@@ -27,7 +27,7 @@
             <strong>{{ trening.dan_u_tjednu }}</strong>
             <br>
             <small class="text-green-lighten-1 font-weight-bold">
-              {{ formatirajVrijeme(trening.vrijeme_pocetka) }} - {{ formatirajVrijeme(trening.vrijeme_kraja) }}
+              {{ trening.vrijeme_pocetka }} - {{ trening.vrijeme_kraja }}
             </small>
           </td>
           <td>{{ trening.kapacitet }} mjesta</td>
@@ -68,11 +68,21 @@
               <v-col cols="12" md="6">
                 <v-text-field v-model="formaTrening.kapacitet" type="number" label="Kapacitet"></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-text-field v-model="formaTrening.vrijeme_pocetka" type="datetime-local" label="Vrijeme početka"></v-text-field>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formaTrening.vrijeme_pocetka"
+                  label="Vrijeme početka"
+                  placeholder="Npr. 18:00"
+                  required
+                ></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-text-field v-model="formaTrening.vrijeme_kraja" type="datetime-local" label="Vrijeme kraja"></v-text-field>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formaTrening.vrijeme_kraja"
+                  label="Vrijeme kraja"
+                  placeholder="Npr. 19:30"
+                  required
+                ></v-text-field>
               </v-col>
               <v-col cols="12">
                 <v-select
@@ -135,8 +145,8 @@ const otvoriUredi = (trening) => {
   formaTrening.value = { 
     ...trening,
     trener_id: trening.trener ? trening.trener.id : null,
-    vrijeme_pocetka: trening.vrijeme_pocetka ? trening.vrijeme_pocetka.substring(0, 16) : '',
-    vrijeme_kraja: trening.vrijeme_kraja ? trening.vrijeme_kraja.substring(0, 16) : ''
+    vrijeme_pocetka: trening.vrijeme_pocetka || '',
+    vrijeme_kraja: trening.vrijeme_kraja || ''
   }
   dialog.value = true
 }
@@ -164,12 +174,6 @@ const obrisiTrening = async (id) => {
       console.error(error)
     }
   }
-}
-
-const formatirajVrijeme = (isoString) => {
-  if (!isoString) return ''
-  const d = new Date(isoString)
-  return d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })
 }
 
 onMounted(() => {
