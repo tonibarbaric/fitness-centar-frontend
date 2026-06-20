@@ -9,7 +9,24 @@
       </v-col>
     </v-row>
 
-    <v-table class="elevation-1 mt-5">
+    <!-- NOVO: Filter po specijalnosti -->
+    <v-row class="mt-4">
+      <v-col cols="12" sm="6" md="4">
+        <v-select
+          v-model="odabranaSpecijalnost"
+          :items="specijalnosti"
+          item-title="naziv"
+          item-value="id"
+          label="Filtriraj po specijalnosti"
+          clearable
+          prepend-inner-icon="mdi-filter"
+          variant="outlined"
+          density="comfortable"
+        ></v-select>
+      </v-col>
+    </v-row>
+
+    <v-table class="elevation-1 mt-2">
       <thead>
         <tr>
           <th class="text-left">Ime</th>
@@ -19,7 +36,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="trener in treneri" :key="trener.id">
+        <!-- Ovdje sada iteriramo kroz 'filtriraniTreneri' umjesto 'treneri' -->
+        <tr v-for="trener in filtriraniTreneri" :key="trener.id">
           <td>{{ trener.ime }}</td>
           <td>{{ trener.prezime }}</td>
           <td>
@@ -36,9 +54,17 @@
             </v-btn>
           </td>
         </tr>
+        
+        <!-- Poruka ako filter ne pronađe nijednog trenera -->
+        <tr v-if="filtriraniTreneri.length === 0">
+          <td colspan="4" class="text-center text-grey py-4">
+            Nema trenera za odabranu specijalnost.
+          </td>
+        </tr>
       </tbody>
     </v-table>
 
+    <!-- Dialog za dodavanje/uređivanje ostaje isti -->
     <v-dialog v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title>
@@ -76,7 +102,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+// Dodan uvoz za 'computed'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 
 const treneri = ref([])
@@ -84,6 +111,9 @@ const specijalnosti = ref([])
 const dialog = ref(false)
 const isEdit = ref(false)
 const formaTrener = ref({ id: null, ime: '', prezime: '', specijalnost_id: null })
+
+// NOVO: Reaktivna varijabla za odabir filtera
+const odabranaSpecijalnost = ref(null)
 
 const dohvatiTrenere = async () => {
   try {
@@ -102,6 +132,19 @@ const dohvatiSpecijalnosti = async () => {
     console.error(e)
   }
 }
+
+// NOVO: Computed property koji vraća filtriranu listu
+const filtriraniTreneri = computed(() => {
+  // Ako nije ništa odabrano (ili je kliknut 'clear'), vrati sve
+  if (!odabranaSpecijalnost.value) {
+    return treneri.value
+  }
+  
+  // Inače vrati samo trenere čiji se id specijalnosti podudara s filterom
+  return treneri.value.filter(trener => 
+    trener.specijalnost && trener.specijalnost.id === odabranaSpecijalnost.value
+  )
+})
 
 const otvoriDodaj = () => {
   isEdit.value = false
