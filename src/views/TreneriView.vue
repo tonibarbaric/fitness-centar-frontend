@@ -9,7 +9,6 @@
       </v-col>
     </v-row>
 
-    <!-- NOVO: Filter po specijalnosti -->
     <v-row class="mt-4">
       <v-col cols="12" sm="6" md="4">
         <v-select
@@ -22,8 +21,9 @@
           prepend-inner-icon="mdi-filter"
           variant="outlined"
           density="comfortable"
+          @update:model-value="page = 1" 
         ></v-select>
-      </v-col>
+        </v-col>
     </v-row>
 
     <v-table class="elevation-1 mt-2">
@@ -36,8 +36,7 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Ovdje sada iteriramo kroz 'filtriraniTreneri' umjesto 'treneri' -->
-        <tr v-for="trener in filtriraniTreneri" :key="trener.id">
+        <tr v-for="trener in paginiraniTreneri" :key="trener.id">
           <td>{{ trener.ime }}</td>
           <td>{{ trener.prezime }}</td>
           <td>
@@ -54,17 +53,18 @@
             </v-btn>
           </td>
         </tr>
-        
-        <!-- Poruka ako filter ne pronađe nijednog trenera -->
-        <tr v-if="filtriraniTreneri.length === 0">
-          <td colspan="4" class="text-center text-grey py-4">
-            Nema trenera za odabranu specijalnost.
-          </td>
+        <tr v-if="paginiraniTreneri.length === 0">
+          <td colspan="4" class="text-center text-grey py-4">Nema trenera za prikaz.</td>
         </tr>
       </tbody>
     </v-table>
 
-    <!-- Dialog za dodavanje/uređivanje ostaje isti -->
+    <v-row justify="center" class="mt-4" v-if="ukupnoStranica > 1">
+      <v-col cols="12" md="8" class="d-flex justify-center">
+        <v-pagination v-model="page" :length="ukupnoStranica" color="primary"></v-pagination>
+      </v-col>
+    </v-row>
+
     <v-dialog v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title>
@@ -73,12 +73,8 @@
         <v-card-text>
           <v-container>
             <v-row>
-              <v-col cols="12">
-                <v-text-field v-model="formaTrener.ime" label="Ime"></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-text-field v-model="formaTrener.prezime" label="Prezime"></v-text-field>
-              </v-col>
+              <v-col cols="12"><v-text-field v-model="formaTrener.ime" label="Ime"></v-text-field></v-col>
+              <v-col cols="12"><v-text-field v-model="formaTrener.prezime" label="Prezime"></v-text-field></v-col>
               <v-col cols="12">
                 <v-select
                   v-model="formaTrener.specijalnost_id"
@@ -102,7 +98,6 @@
 </template>
 
 <script setup>
-// Dodan uvoz za 'computed'
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 
@@ -111,40 +106,37 @@ const specijalnosti = ref([])
 const dialog = ref(false)
 const isEdit = ref(false)
 const formaTrener = ref({ id: null, ime: '', prezime: '', specijalnost_id: null })
-
-// NOVO: Reaktivna varijabla za odabir filtera
 const odabranaSpecijalnost = ref(null)
+
+const page = ref(1)
+const stavkiPoStranici = ref(5)
+
+const filtriraniTreneri = computed(() => {
+  if (!odabranaSpecijalnost.value) return treneri.value
+  return treneri.value.filter(t => t.specijalnost && t.specijalnost.id === odabranaSpecijalnost.value)
+})
+
+const ukupnoStranica = computed(() => Math.ceil(filtriraniTreneri.value.length / stavkiPoStranici.value))
+
+const paginiraniTreneri = computed(() => {
+  const start = (page.value - 1) * stavkiPoStranici.value
+  const end = start + stavkiPoStranici.value
+  return filtriraniTreneri.value.slice(start, end)
+})
 
 const dohvatiTrenere = async () => {
   try {
     const res = await axios.get('http://127.0.0.1:5000/treneri')
     treneri.value = res.data
-  } catch (error) {
-    console.error("Greška pri dohvaćanju trenera:", error)
-  }
+  } catch (error) { console.error(error) }
 }
 
 const dohvatiSpecijalnosti = async () => {
   try {
     const res = await axios.get('http://127.0.0.1:5000/specijalnosti')
     specijalnosti.value = res.data
-  } catch (e) {
-    console.error(e)
-  }
+  } catch (e) { console.error(e) }
 }
-
-// NOVO: Computed property koji vraća filtriranu listu
-const filtriraniTreneri = computed(() => {
-  // Ako nije ništa odabrano (ili je kliknut 'clear'), vrati sve
-  if (!odabranaSpecijalnost.value) {
-    return treneri.value
-  }
-  
-  // Inače vrati samo trenere čiji se id specijalnosti podudara s filterom
-  return treneri.value.filter(trener => 
-    trener.specijalnost && trener.specijalnost.id === odabranaSpecijalnost.value
-  )
-})
 
 const otvoriDodaj = () => {
   isEdit.value = false
@@ -172,9 +164,7 @@ const spremiTrenera = async () => {
     }
     dialog.value = false
     dohvatiTrenere()
-  } catch (error) {
-    console.error(error)
-  }
+  } catch (error) { console.error(error) }
 }
 
 const obrisiTrenera = async (id) => {
@@ -182,9 +172,8 @@ const obrisiTrenera = async (id) => {
     try {
       await axios.delete(`http://127.0.0.1:5000/treneri/${id}`)
       dohvatiTrenere()
-    } catch (error) {
-      console.error(error)
-    }
+      if (paginiraniTreneri.value.length === 1 && page.value > 1) page.value--
+    } catch (error) { console.error(error) }
   }
 }
 

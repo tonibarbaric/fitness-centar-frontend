@@ -19,12 +19,12 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="clan in clanovi" :key="clan.id">
+        <tr v-for="clan in paginiraniClanovi" :key="clan.id">
           <td>{{ clan.ime }}</td>
           <td>{{ clan.prezime }}</td>
           <td>{{ clan.email }}</td>
           <td class="text-center">
-            <v-btn icon variant="text" color="warning" class="mr-2" 3click="otvoriUredi(clan)">
+            <v-btn icon variant="text" color="warning" class="mr-2" @click="otvoriUredi(clan)">
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
             <v-btn icon variant="text" color="error" @click="obrisiClana(clan.id)">
@@ -32,8 +32,17 @@
             </v-btn>
           </td>
         </tr>
+        <tr v-if="paginiraniClanovi.length === 0">
+          <td colspan="4" class="text-center text-grey py-4">Nema članova za prikaz.</td>
+        </tr>
       </tbody>
     </v-table>
+
+    <v-row justify="center" class="mt-4" v-if="ukupnoStranica > 1">
+      <v-col cols="12" md="8" class="d-flex justify-center">
+        <v-pagination v-model="page" :length="ukupnoStranica" color="blue"></v-pagination>
+      </v-col>
+    </v-row>
 
     <v-dialog v-model="dialog" max-width="500px">
       <v-card>
@@ -43,15 +52,9 @@
         <v-card-text>
           <v-container>
             <v-row>
-              <v-col cols="12">
-                <v-text-field v-model="formaClan.ime" label="Ime"></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-text-field v-model="formaClan.prezime" label="Prezime"></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-text-field v-model="formaClan.email" label="Email"></v-text-field>
-              </v-col>
+              <v-col cols="12"><v-text-field v-model="formaClan.ime" label="Ime"></v-text-field></v-col>
+              <v-col cols="12"><v-text-field v-model="formaClan.prezime" label="Prezime"></v-text-field></v-col>
+              <v-col cols="12"><v-text-field v-model="formaClan.email" label="Email"></v-text-field></v-col>
             </v-row>
           </v-container>
         </v-card-text>
@@ -66,13 +69,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 
 const clanovi = ref([])
 const dialog = ref(false)
 const isEdit = ref(false)
 const formaClan = ref({ id: null, ime: '', prezime: '', email: '' })
+
+const page = ref(1)
+const stavkiPoStranici = ref(5)
+
+const ukupnoStranica = computed(() => Math.ceil(clanovi.value.length / stavkiPoStranici.value))
+
+const paginiraniClanovi = computed(() => {
+  const start = (page.value - 1) * stavkiPoStranici.value
+  const end = start + stavkiPoStranici.value
+  return clanovi.value.slice(start, end)
+})
 
 const dohvatiClanove = async () => {
   try {
@@ -105,20 +119,23 @@ const spremiClana = async () => {
     dialog.value = false
     dohvatiClanove()
   } catch (error) {
-    console.error("Greška pri spremanju člana:", error)
+    console.error(error)
   }
 }
 
 const obrisiClana = async (id) => {
-  if (confirm("Jeste li sigurni da želite obrisati ovog člana?")) {
+  if (confirm("Jeste li sigurni da želite izbrisati ovog člana?")) {
     try {
       await axios.delete(`http://127.0.0.1:5000/clanovi/${id}`)
       dohvatiClanove()
+      if (paginiraniClanovi.value.length === 1 && page.value > 1) {
+        page.value--
+      }
     } catch (error) {
-      console.error("Greška pri brisanju člana:", error)
+      console.error(error)
     }
   }
 }
 
-onMounted(dohvatiClanove)
+onMounted(() => dohvatiClanove())
 </script>
